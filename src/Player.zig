@@ -29,6 +29,7 @@ pub const Input = struct {
     up: bool,
     down: bool,
     jump: bool,
+    shoot: bool,
 
     pub fn combine(a: Input, b: Input) Input {
         return .{
@@ -37,6 +38,7 @@ pub const Input = struct {
             .up = a.up or b.up,
             .down = a.down or b.down,
             .jump = a.jump or b.jump,
+            .shoot = a.shoot or b.shoot,
         };
     }
 
@@ -47,6 +49,7 @@ pub const Input = struct {
             .up = web.isKeyDown(keys.KEY_UP) or web.isKeyDown(keys.KEY_W),
             .down = web.isKeyDown(keys.KEY_DOWN) or web.isKeyDown(keys.KEY_S),
             .jump = web.isKeyDown(keys.KEY_SPACE),
+            .shoot = web.isKeyDown(keys.KEY_B),
         };
     }
 
@@ -57,6 +60,7 @@ pub const Input = struct {
             .up = web.isButtonDown(12),
             .down = web.isButtonDown(13),
             .jump = web.isButtonDown(0),
+            .shoot = false, // TODO
         };
     }
 };
@@ -74,6 +78,7 @@ box: Box = .{ .x = 0, .y = 0, .w = width, .h = height },
 vx: i32 = 0, // fixed point
 vy: i32 = 0,
 state: State = .idle,
+shooting: bool = false,
 anim_time: i32 = 0,
 slide_frames: u8 = 0,
 face_left: bool = false,
@@ -153,6 +158,12 @@ pub fn handleInput(player: *Player, room: Room, attribs: []const Tile.Attrib, in
         .climbing => doClimbing(player, room, attribs, input, prev_input),
         .sliding => doSliding(player, room, attribs, input, prev_input),
         else => {},
+    }
+    if (input.shoot) {
+        if (!player.shooting) {
+            player.shooting = true;
+            web.consoleLog("shoot!", .{});
+        }
     }
 }
 
