@@ -2,6 +2,7 @@ const std = @import("std");
 
 const web = @import("web.zig");
 const keys = @import("keys.zig");
+const sound = @import("sound.zig");
 
 const Renderer = @import("Renderer.zig");
 const Rect2 = Renderer.Rect2;
@@ -291,6 +292,11 @@ const GameData = struct {
 };
 
 var game_data = GameData{ .prev_input = undefined };
+// we start muted because we can't create an audio context until the user
+// interacts with the game, so we unmute after the user presses a button
+// on the title screen
+var sound_muted = true;
+var sound_data = sound.Sound{ };
 var cur_stage: Stage = needleman;
 
 fn uploadRoomTexture(texture: *Renderer.Texture, room: Room) void {
@@ -332,11 +338,13 @@ export fn onResize(width: c_uint, height: c_uint, scale: f32) void {
 export fn onKeyDown(key: c_uint) void {
     if (game_data.state == .title) {
         game_data.state = .start;
+        sound_muted = false;
     }
     switch (key) {
         keys.KEY_1 => game_data.saveSnapshot(),
         keys.KEY_2 => game_data.loadSnapshot(),
         keys.KEY_3 => game_data.player.no_clip = !game_data.player.no_clip,
+        keys.KEY_M => sound_muted = !sound_muted,
         else => {},
     }
 }
@@ -489,7 +497,21 @@ fn drawRoom(room: Room, room_tex: Renderer.Texture, door1_h: u8, door2_h: u8) vo
     }
 }
 
+var prev_time_opt: ?usize = null;
 export fn onAnimationFrame() void {
+    if (!sound_muted) {
+        const now = web.jsNowMillis();
+        if (prev_time_opt) |prev_time| {
+            const elapsed = std.math.cast(u32, now - prev_time) orelse std.math.maxInt(u32);
+            if (elapsed > 0) {
+                // TODO: cap elapsed?
+                sound_data.play(elapsed);
+            }
+        } else {
+            sound_data.play(1);
+        }
+        prev_time_opt = now;
+    }
     game_data.tick();
     Renderer.beginDraw();
     draw();
